@@ -8,8 +8,8 @@ const char *ssid = "HimalPixel";
 const char *password = "abcdef11";
 
 // Firebase Realtime Database Info
-const char *firebaseHost = "iotbin-1f0c5-default-rtdb.asia-southeast1.firebasedatabase.app";
-const char *firebaseAuth = "AIzaSyBSL2Kb6B8mO72SRatUrSoSfVyastAZuwo";
+const char *firebaseHost = "stroke-rehab-arm-default-rtdb.asia-southeast1.firebasedatabase.app";
+const char *firebaseAuth = "AIzaSyBfr5aBDUGnIKaOS62m9za4smyFWQae6tk";
 
 // Device Configuration
 const String rehabManus = "rehab123";
