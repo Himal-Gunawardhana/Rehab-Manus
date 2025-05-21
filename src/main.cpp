@@ -1,9 +1,9 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
+#include <Servo.h>  // Required for RC PWM
 #include <Arduino.h>
 
-// WiFi Credentials
 const char *ssid = "HimalPixel";
 const char *password = "abcdef11";
 
@@ -14,43 +14,45 @@ const char *firebaseAuth = "AIzaSyBfr5aBDUGnIKaOS62m9za4smyFWQae6tk";
 // Device Configuration
 const String rehabManus = "rehab123";
 
-// Sensor Pins
+Servo esc;
+
 #define Relay_1 D1
 #define Relay_2 D2
-#define Motor_PWM D4
+#define Motor_PWM D4  // ESC signal pin
 
-// Variables
 bool switch1 = false;
 bool switch2 = true;
-int PWMSignal = 128;
+int PWMSignal = 0;
 
 void connectToWiFi();
 void readDataFromFirebase();
 
-void setup()
-{
+void setup() {
   Serial.begin(115200);
-
-  // Initialize WiFi
   connectToWiFi();
 
-  // Initialize sensor pins
   pinMode(Relay_1, OUTPUT);
   pinMode(Relay_2, OUTPUT);
-  pinMode(Motor_PWM, OUTPUT);
+
+  esc.attach(Motor_PWM);  // Attach ESC signal pin
 }
 
-void loop()
-{
-  // Read data from Firebase
-  readDataFromFirebase();  // ✅ FIXED: Removed parameters
+void loop() {
+  readDataFromFirebase();
 
-  // Control relays and motor based on Firebase data
   digitalWrite(Relay_1, switch1 ? HIGH : LOW);
   digitalWrite(Relay_2, switch2 ? HIGH : LOW);
-  analogWrite(Motor_PWM, PWMSignal);
 
-  delay(100); // Adjust delay as needed
+  // Map 0-100 to 1000-2000us pulse width
+  int escPulse = map(PWMSignal, 0, 100, 1000, 2000);
+  esc.writeMicroseconds(escPulse);  // Send proper RC PWM signal
+
+  Serial.print("PWMSignal (0-100): ");
+  Serial.print(PWMSignal);
+  Serial.print(" | ESC Pulse: ");
+  Serial.println(escPulse);
+
+  delay(100);
 }
 
 void connectToWiFi()
@@ -64,7 +66,7 @@ void connectToWiFi()
     Serial.print(".");
   }
 
-  Serial.println("Connected to WiFi!");
+  Serial.println(" Connected to WiFi!");
 }
 
 void readDataFromFirebase()
@@ -73,12 +75,11 @@ void readDataFromFirebase()
   {
     HTTPClient http;
     WiFiClientSecure client;
-    client.setInsecure(); // Use this to skip SSL certificate verification for testing
+    client.setInsecure(); // Skip SSL verification (for development only)
 
-    // Create Firebase URL
+    // Construct Firebase URL
     String url = String("https://") + firebaseHost + "/rehabManus/" + rehabManus + ".json?auth=" + firebaseAuth;
 
-    // Send HTTP GET request
     http.begin(client, url);
     int httpResponseCode = http.GET();
 
@@ -96,6 +97,9 @@ void readDataFromFirebase()
         switch1 = doc["switch1"] | false;
         switch2 = doc["switch2"] | false;
         PWMSignal = doc["PWMSignal"] | 0;
+
+        // Clamp value to 0-100 to avoid unexpected behavior
+        PWMSignal = constrain(PWMSignal, 0, 100);
       }
       else
       {
